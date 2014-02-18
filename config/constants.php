@@ -1,0 +1,6 @@
+<?php
+
+/*
+ * Constants App 
+ * 
+ */

@@ -1,0 +1,19 @@
+AddCharset UTF-8 .php
+AddCharset ISO-8859-1 .html
+RewriteEngine On
+
+php_value upload_max_filesize 2M
+php_value post_max_size 600M
+php_value max_execution_time 240
+
+<FilesMatch "\.(htaccess|htpasswd|ini|phps|log|bak|sql|txt|)$">
+    Order Allow,Deny
+    Deny from all
+</FilesMatch>
+
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-l
+RewriteBase /shinigamifk
+
+RewriteRule ^(.+)$ index.php?url=$1 [QSA,L]
