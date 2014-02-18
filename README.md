@@ -2,7 +2,6 @@
 ===========
 <br/>
 <br/>
-<img src="http://s22.postimg.org/d5rjsvsep/5yt54y.png" />
 <br/>
 <br/>
 
