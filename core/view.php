@@ -125,38 +125,44 @@ class View extends Smarty {
     }
 
     public function tpl($html, $array = array()) {
-        if (strstr($html, '>') && !strstr($html, ':')) {
-            if (substr(trim($html), 0, 1) === '>') {
-                $view = str_replace(array(">"), "", trim($html));
-                $path = $this->isModule() ?
-                        APP_ROOT . "modules/{$this->getModule()}/views/{$view}/html/" :
-                        APP_PATH . "views/{$view}/html/";
-                $tpl = str_replace(array(">", ":save", ":"), '', $html);
-            } else {
-                list($module, $view) = explode('>', trim($html));
-                $path = APP_ROOT . "modules/{$module}/views/{$view}/html/";
-                $tpl = $view;
-            }
-        } elseif (strstr($html, ':')) {
-            $path = $this->_path['view'];
-        } else {
-            $this->error("Method Does Not Exist: this->_view->tpl('" . $html . "')");
-        }
-        $this->setLayout('empty');
-        $arr = array();
-        foreach ($array as $value) {
-            $this->render($value, $path);
-            $arr[$value] = $this->fetch("index.tpl");
-        }
-        $this->setLayout('default');
-        $this->clearCompiledTemplate();
 
-        return strstr($html, ':save') ? (object) $arr : $this->assign($tpl, $arr);
+        $view = $tpl = str_replace(array(">", ":save", ":", "> ", " : ", ": save"), '', trim($html)); // Limpiamos para obtener vista
+        $path = $this->isModule() ? // Establece el Path por Defecto dependiendo de la Petición (App/Module)
+                APP_ROOT . "modules/{$this->getModule()}/views/{$view}/html/" :
+                APP_PATH . "views/{$view}/html/";
+
+        if (is_numeric(strpos($html, '>'))) {// Evaluamos que se trate de una Vista Externa
+            if (substr(trim($html), 0, 1) !== '>') {//Evaluamos si la Vista Externa es un Module o App
+                list($module, $view) = explode('>', trim($html)); //Si es Module Separamos la vista y el modulo
+                if (strpos($html, ':')) {//Si la vista Contiene un metodo ':' la limpiamos de ese metodo
+                    list($view) = explode(':', trim($view)); //
+                }
+                $tpl = $module . "_" . $view; // Re armamos el nombre que llevara en TPL
+                $path = APP_ROOT . "modules/{$module}/views/{$view}/html/"; // Asignamos Ruta de Modulo
+            } else {// Si se trata de path APP
+                $path = APP_PATH . "views/{$view}/html/";
+            }
+        } elseif (is_numeric(strstr($html, ':')) || $html) { // Evaluamos de que venga con un metodo o sea compatible
+            if (!is_numeric((strstr($html, '>')))) {// Si no se trata de una vista externa asignamos el Path
+                $path = $this->_path['view']; // Asignamos Ruta de APP
+            }
+        } else {// Si no es una Vista Externa, Ni trae Metodos, o viene Vacía
+            $this->error(1, $html); // Renderizar Error
+        }
+        $this->setLayout('empty'); //Tomar Template por Defecto vacío
+        $arr = array(); //Inicializar Array
+        foreach ($array as $value) {// Recorremos el array de tpl que fueron pasados por el metodo
+            $this->render($value, $path); //Verificamos que cada template exista en el directorio
+            $arr[$value] = $this->fetch("index.tpl"); // Objeto Smarty con el Template
+        }
+        $this->setLayout('default'); // Reestablecemos el por defecto
+        $this->clearCompiledTemplate(); // Delete compiled template file
+        return strstr($html, ':save') ? (object) $arr : $this->assign($tpl, $arr); //Retorna el Templae o lo guarda en variable TPL
     }
 
     public function printTemplate($tpl = null) {
         $this->render((is_null($tpl) ? $this->getMethod() : $tpl), $this->_path['view']);
-        //$this->loadFilter("output", "trimwhitespace"); //Quitar Espcios en Blanco del Template Renderizado
+//        $this->loadFilter("output", "trimwhitespace"); //Quitar Espcios en Blanco del Template Renderizado
         $this->display("index.tpl");
     }
 
@@ -167,26 +173,8 @@ class View extends Smarty {
      * @throws ViewNotFound
      */
     private function render($tpl, $path) {
-
-
-       /* $this->getPath(3);
-
-        echo $tpl;
-        echo "<br/>";
-        echo $path;
-
-        exit;*/
-
         if (!file_exists($path . "$tpl.tpl")) {
-
-            /* $this->assign('XVI', array(
-              'details' => $this->_route->values,
-              'template' => "$path$tpl.tpl"
-              )); */
-
-            //$this->tpl('>opps', array('aspp'));
-
-            $this->error("Template not found:   $path$tpl.tpl");
+            $this->error(2, $path . $tpl);
         } else {
             $params = array(
                 'configs' => array(
@@ -204,8 +192,7 @@ class View extends Smarty {
             // Autoload URL folders in /public/*
             $public = array();
             foreach (glob(APP_ROOT . 'public' . DS . '*', GLOB_ONLYDIR) as $name) {
-                $public[str_replace(APP_ROOT . 'public' . DS, '', $name)] =
-                        str_replace(APP_ROOT, SITE . DS, $name);
+                $public[str_replace(APP_ROOT . 'public' . DS, '', $name)] = str_replace(APP_ROOT, SITE . DS, $name);
             }
             $this->assign('_public', $public);
             $this->assign('_content', $path . "$tpl.tpl");
@@ -227,48 +214,58 @@ class View extends Smarty {
 
     private function setResources($action, $name, $data = array()) {
 
+        $view = str_replace(array(":add", ":remove"), '', trim($action));
         $path = $this->isModule() ?
-                APP_ROOT . "modules/{$this->getModule()}/views/" : APP_PATH . "views/";
+                APP_ROOT . "modules/{$this->getModule()}/views/{$view}/{$name}/" :
+                APP_PATH . "views/{$view}/{$name}/";
 
-        if (strstr($action, '>') && !strstr($action, ':')) {
-            if (substr(trim($action), 0, 1) === '>') {
-                $action = str_replace(array(">", " "), "", $action);
-                foreach ($data as $value)
-                    $this->_path[$name][] = $path . $action . DS . $name . DS . $value . "." . $name;
-            } else {
+        if ($action && is_numeric(strpos($action, ':'))) {
+            if (strpos($action, '>')) {
                 list($module, $view) = explode('>', trim($action));
-                $path = APP_ROOT . "modules/{$module}/views/{$view}/";
-                foreach ($data as $value)
-                    $this->_path[$name][] = $path . $name . DS . $value . "." . $name;
+                if (strpos($action, ':')) {
+                    list($view) = explode(':', trim($view));
+                }
+                $path = APP_ROOT . "modules/{$module}/views/{$view}/{$name}/";
+            } else {
+                $path = APP_PATH . "views/{$view}/{$name}/";
+            }
+        } elseif (is_numeric(strstr($action, ':')) && $action) {
+            if (!is_numeric((strstr($action, '>')))) {
+                $path = $this->_path['view'];
             }
         } else {
-            $diff = array();
-            foreach ($data as $value)
-                $diff[] = $path . $this->_view . DS . $name . DS . $value . "." . $name;
-            if (strstr($action, ':') ? $action : ':' . $action) {
-                switch ($action) {
-                    case ':add':
-                        foreach ($diff as $value)
-                            $this->_path[$name][] = $value;
+            $this->error(3, "$name('$action') - Params invalids!");
+        }
+        list($pt, $ac) = explode(':', trim($action));
+
+        if (!$data) {
+            switch ($ac) {
+                case 'none':
+                    unset($this->_path[$name]);
+                    break;
+                case 'own':
+                    $this->autoload();
+                    break;
+                default:
+                    $this->error(3, "$name('$action') - Method name invalid!");
+                    break;
+            }
+        } else {
+            foreach ($data as $value) {
+                $file = $path . $value . "." . $name;
+                switch ($ac) {
+                    case 'add':
+                        $this->_path[$name][] = $file;
                         break;
-                    case ':url':
-                        foreach ($data as $value)
-                            $this->_path[$name][] = $value;
+                    case 'remove':
+                        $key = array_search($file, $this->_path[$name]);
+                        unset($this->_path[$name][$key]);
                         break;
-                    case ':none':
-                        unset($this->_path[$name]);
-                        break;
-                    case ':remove':
-                        $this->_path[$name] = array_diff($this->_path[$name], $diff);
-                        break;
-                    case strstr($action, ':app>'):
-                        list($app, $view) = explode(':app>', $action);
-                        $path = APP_PATH . "views/{$view}/";
-                        foreach ($data as $value)
-                            $this->_path[$name][] = $path . $name . DS . $value . "." . $name;
+                    case 'url':
+                        $this->_path[$name][] = $value;
                         break;
                     default:
-                        $this->error("Method Does Not Exist in  : this->_view->$name('" . $action . "')");
+                        $this->error(3, "$name('$action') - Method name invalid or Params!");
                         break;
                 }
             }
@@ -298,41 +295,29 @@ class View extends Smarty {
         }
     }
 
-    private function error($msj) {
-
-        echo "<pre>";
-        @print_r($this->_route->values);
-        echo "</pre>";
-        exit($msj);
-    }
-
-    //
-
-    private function getPath($format) {
-
-        $array = array();
-
-        if (strstr($format, '>') && !strstr($format, ':')) { // Si Tiene '>' y no tiene ':' ghace referencia a otra Lista!.
-            if (substr(trim($format), 0, 1) === '>') {// Pertenece a la Carpeta APP
-                $view = str_replace(array(">"), "", trim($format)); // Reemplazar '>' por espacios (ya tenemos un nonbre limpio)
-
-                $path = $this->isModule() ? // Determina ruta para el path
-                        APP_ROOT . "modules/{$this->getModule()}/views/{$view}/html/" :
-                        APP_PATH . "views/{$view}/html/";
-
-                $tpl = str_replace(array(">", ":save", ":"), '', $format); //Limpiar caracteres
-            } else {
-                list($module, $view) = explode('>', trim($format)); // Sino no se encuentra al inicio '>', busca y separa en modulo y vista
-
-                $path = APP_ROOT . "modules/{$module}/views/{$view}/html/";
-
-                $tpl = $view;
-            }
-        } elseif (strstr($html, ':')) {// Si tiene dos Puntos se Considera como Método
-            $path = $this->_path['view'];
-        } else {
-            $this->error("Method Does Not Exist: this->_view->tpl('" . $html . "')");
+    private function error($error, $msj) {
+        echo "<pre style='background:black;color:greenyellow;padding:20px;'>";
+        print_r($this->_route->values);
+        switch ($error) {
+            case 1:
+                echo "Method Does Not Exist: this->_view->tpl('" . $msj . "')";
+                break;
+            case 2:
+                echo "Template not found: $msj.tpl";
+                break;
+            case 3:
+                echo "Method Does Not Exist: this->_view->" . $msj;
+                break;
+            case 4:
+                break;
+            case 5:
+                break;
+            default:
+                echo "Error Desconocido en la Vista :c";
+                break;
         }
+        echo "<br><br>- - Shinigami FK - -</pre>";
+        exit;
     }
 
 }
