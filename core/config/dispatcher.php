@@ -53,6 +53,13 @@ class Dispatcher {
                     'module' => $name
                 )
             ));
+	    $this->router_map->add($name, "/{:base}/$name/{:controller}", array(
+                'values' => array(
+                    'controller' => 'index',
+                    'method' => 'index',
+                    'module' => $name
+                )
+            ));
         }
         //router default
         $this->router_map->add('default', '/{:base}/{:controller}/{:method}/{:args*}');
