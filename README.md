@@ -1,9 +1,7 @@
 { ShinigamiFK }
 ===========
-<br/>
-<br/>
-<br/>
-<br/>
+
+<img src="http://s22.postimg.org/7vhznuis1/shinigamifk.png"  />
 
 <b><em>Shinigami Framework - 1.0.0</em></b>
 
@@ -31,6 +29,6 @@ Framework orientada a la web, que permite crear proyectos de manera fiable, segu
 
 { shinigamifk@gmail.com }
 
-<img src="http://s22.postimg.org/7vhznuis1/shinigamifk.png"  />
+
 
 
