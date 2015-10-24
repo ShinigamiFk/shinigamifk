@@ -27,8 +27,9 @@
         {/if}
         <!--JavaScript-->
         <script type="text/javascript" async="async" >
-            var site = '{$_site}';
-            var base = '{$_base}';
+             var site = '{$_site}';
+             var base = '{$_base}';
+             var path = '{$_path}';
         </script>
         <!-- JS Jquery 1.10.2 -->
         <script type="text/javascript" src="{$_public.addons}/jquery-1.10.2/jquery-1.10.2.min.js"></script>
