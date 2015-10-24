@@ -162,7 +162,7 @@ class View extends Smarty {
 
     public function printTemplate($tpl = null) {
         $this->render((is_null($tpl) ? $this->getMethod() : $tpl), $this->_path['view']);
-//        $this->loadFilter("output", "trimwhitespace"); //Quitar Espcios en Blanco del Template Renderizado
+        $this->loadFilter("output", "trimwhitespace"); //Quitar Espcios en Blanco del Template Renderizado
         $this->display("index.tpl");
     }
 
@@ -173,7 +173,11 @@ class View extends Smarty {
      * @throws ViewNotFound
      */
     private function render($tpl, $path) {
-        if (!file_exists($path . "$tpl.tpl")) {
+
+        $pathTPL = $path . $tpl . '.tpl';
+        $pathHTML = $path . $tpl . '.html';
+
+        if (!file_exists($pathTPL) && !file_exists($pathHTML)) {
             $this->error(2, $path . $tpl);
         } else {
             $params = array(
@@ -195,11 +199,12 @@ class View extends Smarty {
                 $public[str_replace(APP_ROOT . 'public' . DS, '', $name)] = str_replace(APP_ROOT, SITE . DS, $name);
             }
             $this->assign('_public', $public);
-            $this->assign('_content', $path . "$tpl.tpl");
+            $this->assign('_content', (file_exists($pathTPL)) ? $pathTPL : $pathHTML);
             $this->assign('_params', $params);
             $this->assign('_root', APP_ROOT);
             $this->assign('_site', SITE);
             $this->assign('_base', BASE_URL);
+            $this->assign('_path', str_replace(APP_ROOT, SITE . '/', $this->_path['view']));
             $this->assign('_session', Session::singleton());
         }
     }
@@ -303,7 +308,7 @@ class View extends Smarty {
                 echo "Method Does Not Exist: this->_view->tpl('" . $msj . "')";
                 break;
             case 2:
-                echo "Template not found: $msj.tpl";
+                echo "<br/>Template not found:<br/> $msj.tpl <br/>or<br/> $msj.html";
                 break;
             case 3:
                 echo "Method Does Not Exist: this->_view->" . $msj;
